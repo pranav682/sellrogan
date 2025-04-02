@@ -1,0 +1,57 @@
+[
+  {
+    "success": true,
+    "listings": [
+      {
+        "id": "1",
+        "title": "Wireless Earbuds with Noise Cancellation",
+        "description": "Premium Bluetooth 5.0 Wireless Earbuds with Active Noise Cancellation, 30-Hour Battery Life, and Waterproof Design",
+        "price": 79.99,
+        "currency": "USD",
+        "platform": "Amazon",
+        "url": "https://amazon.com/listing/wireless-earbuds-premium",
+        "imageUrl": "https://example.com/images/earbuds-premium.jpg",
+        "status": "active",
+        "createdAt": "2025-03-15T10:30:00.000Z",
+        "updatedAt": "2025-04-02T16:05:00.000Z",
+        "sourceProduct": {
+          "id": "1",
+          "title": "Wireless Earbuds",
+          "price": 49.99,
+          "platform": "Walmart"
+        },
+        "stats": {
+          "views": 1250,
+          "sales": 75,
+          "revenue": 5999.25,
+          "profit": 2250.00
+        }
+      },
+      {
+        "id": "2",
+        "title": "Smart Fitness Watch with Heart Rate Monitor",
+        "description": "Advanced Fitness Tracker with Heart Rate Monitoring, Sleep Tracking, GPS, and 7-Day Battery Life",
+        "price": 129.99,
+        "currency": "USD",
+        "platform": "eBay",
+        "url": "https://ebay.com/listing/smart-fitness-watch",
+        "imageUrl": "https://example.com/images/fitness-watch.jpg",
+        "status": "active",
+        "createdAt": "2025-03-20T14:15:00.000Z",
+        "updatedAt": "2025-04-01T09:45:00.000Z",
+        "sourceProduct": {
+          "id": "2",
+          "title": "Smart Watch",
+          "price": 89.99,
+          "platform": "AliExpress"
+        },
+        "stats": {
+          "views": 875,
+          "sales": 42,
+          "revenue": 5459.58,
+          "profit": 1680.00
+        }
+      }
+    ]
+  }
+]

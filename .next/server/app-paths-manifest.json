@@ -1,0 +1,17 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/search/route": "app/api/search/route.js",
+  "/api/v1/analytics/route": "app/api/v1/analytics/route.js",
+  "/api/v1/docs/route": "app/api/v1/docs/route.js",
+  "/api/v1/listings/route": "app/api/v1/listings/route.js",
+  "/api/v1/products/search/route": "app/api/v1/products/search/route.js",
+  "/analyze/page": "app/analyze/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/compare/page": "app/compare/page.js",
+  "/credentials/page": "app/credentials/page.js",
+  "/page": "app/page.js",
+  "/listing/page": "app/listing/page.js",
+  "/pricing/page": "app/pricing/page.js",
+  "/search/page": "app/search/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
+}
