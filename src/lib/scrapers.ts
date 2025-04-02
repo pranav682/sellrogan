@@ -1,4 +1,7 @@
-import puppeteer from 'puppeteer';
+'use client';
+
+// Mock scrapers implementation for SellRogan platform
+// This is a client-side mock implementation that doesn't require puppeteer
 
 // Define interfaces
 export interface ProductSource {
@@ -21,7 +24,6 @@ export interface ScraperResult {
 
 // Base scraper class that all platform-specific scrapers will extend
 export abstract class BaseScraper {
-  protected browser: puppeteer.Browser | null = null;
   protected reliability: number;
   protected source: string;
   
@@ -30,23 +32,10 @@ export abstract class BaseScraper {
     this.reliability = reliability;
   }
   
-  // Initialize browser instance
-  protected async initBrowser(): Promise<puppeteer.Browser> {
-    if (!this.browser) {
-      this.browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-    }
-    return this.browser;
-  }
-  
-  // Close browser instance
+  // Close browser instance - mock implementation
   public async close(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-    }
+    console.log(`[MOCK] Closing browser for ${this.source} scraper`);
+    // No actual browser to close in this mock implementation
   }
   
   // Abstract method that each platform-specific scraper must implement
@@ -74,75 +63,49 @@ export class AmazonScraper extends BaseScraper {
   }
   
   public async search(query: string): Promise<ScraperResult> {
-    try {
-      const browser = await this.initBrowser();
-      const page = await browser.newPage();
-      
-      // Set user agent to avoid detection
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-      
-      // Navigate to Amazon search page
-      await page.goto(`https://www.amazon.com/s?k=${encodeURIComponent(query)}`, {
-        waitUntil: 'networkidle2'
-      });
-      
-      // Wait for search results to load
-      await page.waitForSelector('.s-result-item');
-      
-      // Extract product information
-      const products = await page.evaluate((reliability) => {
-        const items = Array.from(document.querySelectorAll('.s-result-item[data-asin]:not([data-asin=""])'));
-        return items.slice(0, 5).map((item, index) => {
-          const nameElement = item.querySelector('h2 .a-link-normal');
-          const priceElement = item.querySelector('.a-price .a-offscreen');
-          const linkElement = item.querySelector('h2 .a-link-normal');
-          const imageElement = item.querySelector('img.s-image');
-          
-          // Extract shipping information
-          let shipping = 0;
-          const shippingElement = item.querySelector('.a-color-secondary .a-row');
-          if (shippingElement && shippingElement.textContent?.includes('shipping')) {
-            const shippingText = shippingElement.textContent;
-            const shippingMatch = shippingText.match(/\$[\d.]+/);
-            if (shippingMatch) {
-              shipping = parseFloat(shippingMatch[0].replace('$', ''));
-            }
-          }
-          
-          const name = nameElement ? nameElement.textContent?.trim() || 'Unknown Product' : 'Unknown Product';
-          const priceText = priceElement ? priceElement.textContent || '$0.00' : '$0.00';
-          const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-          const url = linkElement ? linkElement.getAttribute('href') || '#' : '#';
-          const image = imageElement ? imageElement.getAttribute('src') || undefined : undefined;
-          
-          return {
-            id: index + 1,
-            name,
-            price,
-            source: 'Amazon',
-            url: url.startsWith('http') ? url : `https://www.amazon.com${url}`,
-            reliability,
-            shipping,
-            total: price + shipping,
-            image
-          };
-        });
-      }, this.reliability);
-      
-      await page.close();
-      
-      return {
-        success: true,
-        results: products
-      };
-    } catch (error) {
-      console.error('Amazon scraping error:', error);
-      return {
-        success: false,
-        results: [],
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+    console.log(`[MOCK] Searching Amazon for: ${query}`);
+    
+    // Return mock data instead of actually scraping
+    const mockProducts: ProductSource[] = [
+      {
+        id: 1,
+        name: `${query} - Premium Version`,
+        price: 49.99,
+        source: 'Amazon',
+        url: 'https://www.amazon.com/example-product-1',
+        reliability: this.reliability,
+        shipping: 0,
+        total: 49.99,
+        image: 'https://via.placeholder.com/150'
+      },
+      {
+        id: 2,
+        name: `${query} - Standard Edition`,
+        price: 29.99,
+        source: 'Amazon',
+        url: 'https://www.amazon.com/example-product-2',
+        reliability: this.reliability,
+        shipping: 4.99,
+        total: 34.98,
+        image: 'https://via.placeholder.com/150'
+      },
+      {
+        id: 3,
+        name: `${query} - Budget Option`,
+        price: 19.99,
+        source: 'Amazon',
+        url: 'https://www.amazon.com/example-product-3',
+        reliability: this.reliability,
+        shipping: 5.99,
+        total: 25.98,
+        image: 'https://via.placeholder.com/150'
+      }
+    ];
+    
+    return {
+      success: true,
+      results: mockProducts
+    };
   }
 }
 
@@ -153,77 +116,49 @@ export class WalmartScraper extends BaseScraper {
   }
   
   public async search(query: string): Promise<ScraperResult> {
-    try {
-      const browser = await this.initBrowser();
-      const page = await browser.newPage();
-      
-      // Set user agent to avoid detection
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-      
-      // Navigate to Walmart search page
-      await page.goto(`https://www.walmart.com/search?q=${encodeURIComponent(query)}`, {
-        waitUntil: 'networkidle2'
-      });
-      
-      // Wait for search results to load
-      await page.waitForSelector('[data-testid="product-results"]');
-      
-      // Extract product information
-      const products = await page.evaluate((reliability) => {
-        const items = Array.from(document.querySelectorAll('[data-testid="product-results"] [data-item-id]'));
-        return items.slice(0, 5).map((item, index) => {
-          const nameElement = item.querySelector('[data-automation-id="product-title"]');
-          const priceElement = item.querySelector('[data-automation-id="product-price"]');
-          const linkElement = item.querySelector('a[link-identifier="linkText"]');
-          const imageElement = item.querySelector('img[data-testid="product-image"]');
-          
-          // Extract shipping information
-          let shipping = 0;
-          const shippingElement = item.querySelector('[data-automation-id="fulfillment-shipping"]');
-          if (shippingElement) {
-            const shippingText = shippingElement.textContent || '';
-            if (shippingText.includes('shipping')) {
-              const shippingMatch = shippingText.match(/\$[\d.]+/);
-              if (shippingMatch) {
-                shipping = parseFloat(shippingMatch[0].replace('$', ''));
-              }
-            }
-          }
-          
-          const name = nameElement ? nameElement.textContent?.trim() || 'Unknown Product' : 'Unknown Product';
-          const priceText = priceElement ? priceElement.textContent || '$0.00' : '$0.00';
-          const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-          const url = linkElement ? linkElement.getAttribute('href') || '#' : '#';
-          const image = imageElement ? imageElement.getAttribute('src') || undefined : undefined;
-          
-          return {
-            id: index + 1,
-            name,
-            price,
-            source: 'Walmart',
-            url: url.startsWith('http') ? url : `https://www.walmart.com${url}`,
-            reliability,
-            shipping,
-            total: price + shipping,
-            image
-          };
-        });
-      }, this.reliability);
-      
-      await page.close();
-      
-      return {
-        success: true,
-        results: products
-      };
-    } catch (error) {
-      console.error('Walmart scraping error:', error);
-      return {
-        success: false,
-        results: [],
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+    console.log(`[MOCK] Searching Walmart for: ${query}`);
+    
+    // Return mock data instead of actually scraping
+    const mockProducts: ProductSource[] = [
+      {
+        id: 1,
+        name: `Great Value ${query}`,
+        price: 42.99,
+        source: 'Walmart',
+        url: 'https://www.walmart.com/example-product-1',
+        reliability: this.reliability,
+        shipping: 0,
+        total: 42.99,
+        image: 'https://via.placeholder.com/150'
+      },
+      {
+        id: 2,
+        name: `Everyday ${query}`,
+        price: 24.99,
+        source: 'Walmart',
+        url: 'https://www.walmart.com/example-product-2',
+        reliability: this.reliability,
+        shipping: 3.99,
+        total: 28.98,
+        image: 'https://via.placeholder.com/150'
+      },
+      {
+        id: 3,
+        name: `${query} Value Pack`,
+        price: 17.99,
+        source: 'Walmart',
+        url: 'https://www.walmart.com/example-product-3',
+        reliability: this.reliability,
+        shipping: 5.99,
+        total: 23.98,
+        image: 'https://via.placeholder.com/150'
+      }
+    ];
+    
+    return {
+      success: true,
+      results: mockProducts
+    };
   }
 }
 
@@ -234,79 +169,49 @@ export class EbayScraper extends BaseScraper {
   }
   
   public async search(query: string): Promise<ScraperResult> {
-    try {
-      const browser = await this.initBrowser();
-      const page = await browser.newPage();
-      
-      // Set user agent to avoid detection
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-      
-      // Navigate to eBay search page
-      await page.goto(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}`, {
-        waitUntil: 'networkidle2'
-      });
-      
-      // Wait for search results to load
-      await page.waitForSelector('.s-item');
-      
-      // Extract product information
-      const products = await page.evaluate((reliability) => {
-        const items = Array.from(document.querySelectorAll('.s-item'));
-        return items.slice(1, 6).map((item, index) => { // Skip first item as it's usually a header
-          const nameElement = item.querySelector('.s-item__title');
-          const priceElement = item.querySelector('.s-item__price');
-          const linkElement = item.querySelector('.s-item__link');
-          const imageElement = item.querySelector('.s-item__image-img');
-          
-          // Extract shipping information
-          let shipping = 0;
-          const shippingElement = item.querySelector('.s-item__shipping');
-          if (shippingElement) {
-            const shippingText = shippingElement.textContent || '';
-            if (shippingText.includes('Free')) {
-              shipping = 0;
-            } else {
-              const shippingMatch = shippingText.match(/\$[\d.]+/);
-              if (shippingMatch) {
-                shipping = parseFloat(shippingMatch[0].replace('$', ''));
-              }
-            }
-          }
-          
-          const name = nameElement ? nameElement.textContent?.trim() || 'Unknown Product' : 'Unknown Product';
-          const priceText = priceElement ? priceElement.textContent || '$0.00' : '$0.00';
-          const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-          const url = linkElement ? linkElement.getAttribute('href') || '#' : '#';
-          const image = imageElement ? imageElement.getAttribute('src') || undefined : undefined;
-          
-          return {
-            id: index + 1,
-            name,
-            price,
-            source: 'eBay',
-            url,
-            reliability,
-            shipping,
-            total: price + shipping,
-            image
-          };
-        });
-      }, this.reliability);
-      
-      await page.close();
-      
-      return {
-        success: true,
-        results: products
-      };
-    } catch (error) {
-      console.error('eBay scraping error:', error);
-      return {
-        success: false,
-        results: [],
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+    console.log(`[MOCK] Searching eBay for: ${query}`);
+    
+    // Return mock data instead of actually scraping
+    const mockProducts: ProductSource[] = [
+      {
+        id: 1,
+        name: `New ${query} - Fast Shipping`,
+        price: 39.99,
+        source: 'eBay',
+        url: 'https://www.ebay.com/example-product-1',
+        reliability: this.reliability,
+        shipping: 4.99,
+        total: 44.98,
+        image: 'https://via.placeholder.com/150'
+      },
+      {
+        id: 2,
+        name: `Used ${query} - Good Condition`,
+        price: 22.50,
+        source: 'eBay',
+        url: 'https://www.ebay.com/example-product-2',
+        reliability: this.reliability,
+        shipping: 3.99,
+        total: 26.49,
+        image: 'https://via.placeholder.com/150'
+      },
+      {
+        id: 3,
+        name: `Refurbished ${query} - Like New`,
+        price: 15.99,
+        source: 'eBay',
+        url: 'https://www.ebay.com/example-product-3',
+        reliability: this.reliability,
+        shipping: 0,
+        total: 15.99,
+        image: 'https://via.placeholder.com/150'
+      }
+    ];
+    
+    return {
+      success: true,
+      results: mockProducts
+    };
   }
 }
 

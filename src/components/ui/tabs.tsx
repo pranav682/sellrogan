@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 
 export interface TabsProps {
@@ -8,6 +10,16 @@ export interface TabsProps {
   children: React.ReactNode;
 }
 
+// Create a context for the Tabs component
+interface TabsContextType {
+  value: string;
+  onValueChange?: (value: string) => void;
+}
+
+const TabsContext = React.createContext<TabsContextType>({
+  value: "",
+});
+
 export const Tabs: React.FC<TabsProps> = ({ 
   defaultValue, 
   value, 
@@ -15,10 +27,26 @@ export const Tabs: React.FC<TabsProps> = ({
   className = "", 
   children 
 }) => {
+  // Use internal state if value is not controlled
+  const [internalValue, setInternalValue] = React.useState(defaultValue);
+  
+  // Determine the actual value to use
+  const actualValue = value !== undefined ? value : internalValue;
+  
+  // Handle value change
+  const handleValueChange = (newValue: string) => {
+    if (value === undefined) {
+      setInternalValue(newValue);
+    }
+    onValueChange?.(newValue);
+  };
+  
   return (
-    <div className={className}>
-      {children}
-    </div>
+    <TabsContext.Provider value={{ value: actualValue, onValueChange: handleValueChange }}>
+      <div className={className}>
+        {children}
+      </div>
+    </TabsContext.Provider>
   );
 };
 
@@ -92,47 +120,3 @@ export const TabsContent: React.FC<TabsContentProps> = ({
     </div>
   );
 };
-
-// Create a context for the Tabs component
-interface TabsContextType {
-  value: string;
-  onValueChange?: (value: string) => void;
-}
-
-const TabsContext = React.createContext<TabsContextType>({
-  value: "",
-});
-
-// Update the Tabs component to provide the context
-export const TabsWithContext: React.FC<TabsProps> = ({ 
-  defaultValue, 
-  value, 
-  onValueChange, 
-  className = "", 
-  children 
-}) => {
-  // Use internal state if value is not controlled
-  const [internalValue, setInternalValue] = React.useState(defaultValue);
-  
-  // Determine the actual value to use
-  const actualValue = value !== undefined ? value : internalValue;
-  
-  // Handle value change
-  const handleValueChange = (newValue: string) => {
-    if (value === undefined) {
-      setInternalValue(newValue);
-    }
-    onValueChange?.(newValue);
-  };
-  
-  return (
-    <TabsContext.Provider value={{ value: actualValue, onValueChange: handleValueChange }}>
-      <div className={className}>
-        {children}
-      </div>
-    </TabsContext.Provider>
-  );
-};
-
-// Export the components with context
-export { TabsWithContext as Tabs };

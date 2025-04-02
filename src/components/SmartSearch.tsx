@@ -1,515 +1,354 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, ArrowRight, MessageSquare, Sparkles, Filter } from 'lucide-react';
-import { answerSellingQuestion } from '@/lib/geminiAIService';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 interface SmartSearchProps {
   className?: string;
   onSearch?: (query: string, filters: any) => void;
 }
 
+// Define the option type for clarity
+interface ClarifyingQuestion {
+  id: string;
+  question: string;
+  options: string[];
+}
+
 const SmartSearch: React.FC<SmartSearchProps> = ({ 
   className = '',
-  onSearch = () => {}
+  onSearch
 }) => {
-  // Search state
-  const [query, setQuery] = useState('');
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  // State for search query
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [searchStage, setSearchStage] = useState<'initial' | 'clarifying' | 'results'>('initial');
+  const [clarifyingQuestions, setClarifyingQuestions] = useState<ClarifyingQuestion[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   
-  // Conversation state
-  const [isConversationMode, setIsConversationMode] = useState(false);
-  const [conversation, setConversation] = useState<Array<{type: 'user' | 'ai', text: string}>>([]);
-  const [aiQuestion, setAiQuestion] = useState<string>('');
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [isAiThinking, setIsAiThinking] = useState(false);
-  
-  // Filter state
-  const [filters, setFilters] = useState({
-    platform: '',
-    minPrice: '',
-    maxPrice: '',
-    category: '',
-    condition: ''
-  });
-  const [showFilters, setShowFilters] = useState(false);
-  
-  // Refs
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
-  
-  // Mock suggestions based on query
-  useEffect(() => {
-    if (query.length > 1) {
-      const mockSuggestions = [
-        `${query} on Amazon`,
-        `${query} best price`,
-        `${query} for reselling`,
-        `wholesale ${query}`,
-        `${query} profit margin`
-      ];
-      setSuggestions(mockSuggestions);
-    } else {
-      setSuggestions([]);
+  // Handle search form submission
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setIsSearching(true);
+      setSearchStage('clarifying');
+      
+      // Simulate API call to get clarifying questions
+      setTimeout(() => {
+        setClarifyingQuestions(generateClarifyingQuestions(searchQuery));
+        setIsSearching(false);
+      }, 1500);
     }
-  }, [query]);
+  };
   
-  // Handle click outside to close suggestions
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
+  // Generate clarifying questions based on search query
+  const generateClarifyingQuestions = (query: string): ClarifyingQuestion[] => {
+    // This would be replaced with actual AI-generated questions
+    const questions = [
+      {
+        id: 'category',
+        question: `What category of ${query} are you looking for?`,
+        options: ['Electronics', 'Food', 'Clothing', 'Home Goods', 'Other']
+      },
+      {
+        id: 'price_range',
+        question: 'What is your price range?',
+        options: ['Under $20', '$20-$50', '$50-$100', 'Over $100']
+      },
+      {
+        id: 'quality',
+        question: 'What quality level are you looking for?',
+        options: ['Budget', 'Mid-range', 'Premium', 'Luxury']
+      },
+      {
+        id: 'purpose',
+        question: `What will you use the ${query} for?`,
+        options: ['Personal use', 'Reselling', 'Gift', 'Business']
       }
-    };
+    ];
     
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+    return questions;
+  };
   
-  // Handle search submission
-  const handleSearch = () => {
-    if (!query.trim()) return;
-    
+  // Handle option selection
+  const handleOptionSelect = (questionId: string, option: string) => {
+    setSelectedOptions({
+      ...selectedOptions,
+      [questionId]: option
+    });
+  };
+  
+  // Handle submitting clarifying questions
+  const handleSubmitClarification = () => {
     setIsSearching(true);
     
-    // Add to search history
-    if (!searchHistory.includes(query)) {
-      setSearchHistory(prev => [query, ...prev].slice(0, 5));
-    }
-    
-    // If not in conversation mode, just perform the search
-    if (!isConversationMode) {
-      onSearch(query, filters);
-      setIsSearching(false);
-      setShowSuggestions(false);
-      return;
-    }
-    
-    // In conversation mode, add the query to conversation
-    setConversation(prev => [...prev, { type: 'user', text: query }]);
-    setQuery('');
-    
-    // Simulate AI thinking
-    setIsAiThinking(true);
-    
-    // Generate AI response based on the query
-    generateAiResponse(query);
-  };
-  
-  // Generate AI response for conversation mode
-  const generateAiResponse = async (userQuery: string) => {
-    try {
-      // Determine if this is the first query or a follow-up
-      const isFirstQuery = conversation.length === 0;
-      
-      if (isFirstQuery) {
-        // For first query, ask a clarifying question
-        const clarifyingQuestions = [
-          `What price range are you looking for with "${userQuery}"?`,
-          `Are you interested in new or used "${userQuery}"?`,
-          `Which marketplace would you prefer to source "${userQuery}" from?`,
-          `Are you looking for "${userQuery}" to resell or for personal use?`
-        ];
-        
-        // Select a random question
-        const randomQuestion = clarifyingQuestions[Math.floor(Math.random() * clarifyingQuestions.length)];
-        
-        // Generate options based on the question
-        let options: string[] = [];
-        if (randomQuestion.includes('price range')) {
-          options = ['Under $20', '$20-$50', '$50-$100', 'Over $100'];
-        } else if (randomQuestion.includes('new or used')) {
-          options = ['New', 'Used - Like New', 'Used - Good', 'Used - Acceptable'];
-        } else if (randomQuestion.includes('marketplace')) {
-          options = ['Amazon', 'eBay', 'Walmart', 'Etsy', 'Any marketplace'];
-        } else if (randomQuestion.includes('resell or for personal')) {
-          options = ['For reselling', 'Personal use', 'Both'];
+    // Simulate API call to get search results
+    setTimeout(() => {
+      // This would be replaced with actual search results based on query and selected options
+      setSearchResults([
+        {
+          id: 'result-1',
+          title: `${searchQuery} - Premium Quality`,
+          description: 'This is a high-quality product that matches your search criteria.',
+          price: 49.99,
+          rating: 4.5,
+          reviews: 128,
+          image: 'https://via.placeholder.com/100'
+        },
+        {
+          id: 'result-2',
+          title: `${searchQuery} - Best Value`,
+          description: 'Great value for money, perfect for your needs.',
+          price: 29.99,
+          rating: 4.2,
+          reviews: 87,
+          image: 'https://via.placeholder.com/100'
+        },
+        {
+          id: 'result-3',
+          title: `${searchQuery} - Budget Option`,
+          description: 'Affordable option that still meets quality standards.',
+          price: 19.99,
+          rating: 3.9,
+          reviews: 42,
+          image: 'https://via.placeholder.com/100'
         }
-        
-        setTimeout(() => {
-          setAiQuestion(randomQuestion);
-          setAiSuggestions(options);
-          setIsAiThinking(false);
-          setConversation(prev => [...prev, { type: 'ai', text: randomQuestion }]);
-        }, 1500);
-      } else {
-        // For follow-up queries, use the Gemini AI to generate a response
-        const previousContext = conversation.map(msg => `${msg.type === 'user' ? 'User' : 'AI'}: ${msg.text}`).join('\n');
-        
-        const prompt = `
-          Previous conversation:
-          ${previousContext}
-          
-          User: ${userQuery}
-          
-          Based on this conversation about product search, generate:
-          1. A helpful response that narrows down what the user is looking for
-          2. A specific search query that would give the best results
-          3. 2-4 suggested filter options that would be relevant
-          
-          Format your response exactly as follows:
-          RESPONSE: [your helpful response]
-          SEARCH_QUERY: [specific search query]
-          FILTERS: [filter1, filter2, ...]
-        `;
-        
-        // Use a simulated response for now
-        // In a real implementation, we would call the Gemini AI here
-        setTimeout(() => {
-          const simulatedResponse = {
-            response: `I'll help you find the best options for ${userQuery}. Let me search for that with some recommended filters.`,
-            searchQuery: userQuery,
-            filters: ['Amazon', 'New condition', 'Free shipping', 'Highly rated']
-          };
-          
-          // Update conversation with AI response
-          setConversation(prev => [...prev, { type: 'ai', text: simulatedResponse.response }]);
-          
-          // Perform the search with the refined query
-          onSearch(simulatedResponse.searchQuery, filters);
-          
-          // Update UI state
-          setIsAiThinking(false);
-          setAiQuestion('');
-          setAiSuggestions([]);
-          
-          // Exit conversation mode after completing the search
-          setTimeout(() => {
-            setIsConversationMode(false);
-          }, 2000);
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('Error generating AI response:', error);
-      setIsAiThinking(false);
-      setConversation(prev => [...prev, { type: 'ai', text: 'I apologize, but I encountered an error. Could you try asking in a different way?' }]);
-    }
-  };
-  
-  // Handle option selection in conversation mode
-  const handleOptionSelect = (option: string) => {
-    // Add selected option to conversation
-    setConversation(prev => [...prev, { type: 'user', text: option }]);
-    
-    // Simulate AI thinking
-    setIsAiThinking(true);
-    
-    // Clear current options
-    setAiSuggestions([]);
-    
-    // Update filters based on selection
-    if (['Amazon', 'eBay', 'Walmart', 'Etsy'].includes(option)) {
-      setFilters(prev => ({ ...prev, platform: option }));
-    } else if (['New', 'Used - Like New', 'Used - Good', 'Used - Acceptable'].includes(option)) {
-      setFilters(prev => ({ ...prev, condition: option }));
-    } else if (['Under $20', '$20-$50', '$50-$100', 'Over $100'].includes(option)) {
-      let minPrice = '';
-      let maxPrice = '';
+      ]);
       
-      if (option === 'Under $20') {
-        maxPrice = '20';
-      } else if (option === '$20-$50') {
-        minPrice = '20';
-        maxPrice = '50';
-      } else if (option === '$50-$100') {
-        minPrice = '50';
-        maxPrice = '100';
-      } else if (option === 'Over $100') {
-        minPrice = '100';
-      }
+      setSearchStage('results');
+      setIsSearching(false);
       
-      setFilters(prev => ({ ...prev, minPrice, maxPrice }));
-    }
-    
-    // Generate next AI response
-    generateAiResponse(option);
-  };
-  
-  // Toggle conversation mode
-  const toggleConversationMode = () => {
-    setIsConversationMode(!isConversationMode);
-    if (!isConversationMode) {
-      // Entering conversation mode
-      setConversation([]);
-      setAiQuestion('');
-      setAiSuggestions([]);
-    }
+      // Call onSearch callback if provided
+      if (onSearch) {
+        onSearch(searchQuery, selectedOptions);
+      }
+    }, 2000);
   };
   
   // Reset search
-  const resetSearch = () => {
-    setQuery('');
-    setFilters({
-      platform: '',
-      minPrice: '',
-      maxPrice: '',
-      category: '',
-      condition: ''
-    });
-    setIsConversationMode(false);
-    setConversation([]);
-    setAiQuestion('');
-    setAiSuggestions([]);
-    setShowFilters(false);
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
+  const handleResetSearch = () => {
+    setSearchQuery('');
+    setSearchStage('initial');
+    setClarifyingQuestions([]);
+    setSelectedOptions({});
+    setSearchResults([]);
+  };
+  
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
   };
   
   return (
     <div className={`smart-search ${className}`}>
-      <div className="relative">
-        {/* Search input */}
-        <div className="flex items-center">
-          <div className="relative flex-1">
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setShowSuggestions(e.target.value.length > 0);
-              }}
-              onFocus={() => setShowSuggestions(query.length > 0)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder={isConversationMode ? "Ask me about products..." : "Search for products..."}
-              className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              aria-expanded={showSuggestions}
-              role="textbox"
-            />
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            {query && (
-              <button
-                onClick={() => setQuery('')}
-                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-          
-          {/* Search button */}
-          <button
-            onClick={handleSearch}
-            disabled={!query.trim() || isSearching}
-            className={`ml-2 px-4 py-2.5 rounded-lg font-medium flex items-center ${
-              !query.trim() || isSearching
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            {isSearching ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            ) : (
-              <ArrowRight className="h-5 w-5" />
-            )}
-          </button>
-          
-          {/* Conversation mode toggle */}
-          <button
-            onClick={toggleConversationMode}
-            className={`ml-2 px-3 py-2.5 rounded-lg ${
-              isConversationMode
-                ? 'bg-blue-100 text-blue-600'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-            title={isConversationMode ? "Exit conversation mode" : "Enter conversation mode"}
-          >
-            {isConversationMode ? (
-              <Sparkles className="h-5 w-5" />
-            ) : (
-              <MessageSquare className="h-5 w-5" />
-            )}
-          </button>
-          
-          {/* Filter toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`ml-2 px-3 py-2.5 rounded-lg ${
-              showFilters
-                ? 'bg-blue-100 text-blue-600'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-            title={showFilters ? "Hide filters" : "Show filters"}
-          >
-            <Filter className="h-5 w-5" />
-          </button>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <h2 className="text-xl font-semibold mb-4">Smart Search</h2>
         
-        {/* Search suggestions */}
-        {showSuggestions && suggestions.length > 0 && !isConversationMode && (
-          <div
-            ref={suggestionsRef}
-            className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 py-2"
-          >
-            {suggestions.map((suggestion, index) => (
-              <div
-                key={index}
-                className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center"
-                onClick={() => {
-                  setQuery(suggestion);
-                  setShowSuggestions(false);
-                  handleSearch();
-                }}
+        {/* Initial search form */}
+        {searchStage === 'initial' && (
+          <form onSubmit={handleSearch} className="mb-6">
+            <div className="flex">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="What are you looking for?"
+                className="flex-1 border border-gray-300 rounded-l-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                role="textbox"
+                aria-label="Search query"
+              />
+              <button
+                type="submit"
+                disabled={isSearching}
+                className="bg-blue-600 text-white px-4 py-2 rounded-r-md hover:bg-blue-700 disabled:opacity-50"
               >
-                <Search className="h-4 w-4 text-gray-400 mr-2" />
-                <span>{suggestion}</span>
-              </div>
-            ))}
+                {isSearching ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              Our AI will help you find exactly what you're looking for by asking a few questions.
+            </p>
+          </form>
+        )}
+        
+        {/* Clarifying questions */}
+        {searchStage === 'clarifying' && (
+          <div>
+            <div className="flex items-center mb-4">
+              <button
+                onClick={handleResetSearch}
+                className="text-blue-600 hover:text-blue-700 mr-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <h3 className="text-lg font-medium">Searching for: {searchQuery}</h3>
+            </div>
             
-            {searchHistory.length > 0 && (
-              <>
-                <div className="border-t border-gray-200 my-2"></div>
-                <div className="px-4 py-1 text-xs text-gray-500">Recent searches</div>
-                {searchHistory.slice(0, 3).map((item, index) => (
-                  <div
-                    key={`history-${index}`}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center"
-                    onClick={() => {
-                      setQuery(item);
-                      setShowSuggestions(false);
-                      handleSearch();
-                    }}
-                  >
-                    <Search className="h-4 w-4 text-gray-400 mr-2" />
-                    <span>{item}</span>
+            {isSearching ? (
+              <div className="animate-pulse space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="border border-gray-200 rounded-lg p-4">
+                    <div className="h-5 bg-gray-200 rounded w-3/4 mb-4"></div>
+                    <div className="flex space-x-2">
+                      {[1, 2, 3, 4].map(j => (
+                        <div key={j} className="h-8 bg-gray-200 rounded w-24"></div>
+                      ))}
+                    </div>
                   </div>
                 ))}
-              </>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <p className="text-gray-600">
+                  To help you find the best results, please answer these questions:
+                </p>
+                
+                {clarifyingQuestions.map((question, index) => (
+                  <motion.div
+                    key={question.id}
+                    className="border border-gray-200 rounded-lg p-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <h4 className="font-medium mb-3">{question.question}</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {question.options.map((option: string) => (
+                        <button
+                          key={option}
+                          onClick={() => handleOptionSelect(question.id, option)}
+                          className={`px-3 py-1.5 rounded-full text-sm ${
+                            selectedOptions[question.id] === option
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                ))}
+                
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSubmitClarification}
+                    disabled={Object.keys(selectedOptions).length < clarifyingQuestions.length}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Search with These Preferences
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
         
-        {/* Filters panel */}
-        {showFilters && (
-          <div className="mt-2 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
-                <select
-                  value={filters.platform}
-                  onChange={(e) => setFilters({...filters, platform: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="">All Platforms</option>
-                  <option value="Amazon">Amazon</option>
-                  <option value="eBay">eBay</option>
-                  <option value="Walmart">Walmart</option>
-                  <option value="Etsy">Etsy</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price Range</label>
-                <div className="flex space-x-2">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.minPrice}
-                    onChange={(e) => setFilters({...filters, minPrice: e.target.value})}
-                    className="w-1/2 border border-gray-300 rounded-md px-3 py-2"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.maxPrice}
-                    onChange={(e) => setFilters({...filters, maxPrice: e.target.value})}
-                    className="w-1/2 border border-gray-300 rounded-md px-3 py-2"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
-                <select
-                  value={filters.condition}
-                  onChange={(e) => setFilters({...filters, condition: e.target.value})}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="">Any Condition</option>
-                  <option value="New">New</option>
-                  <option value="Used - Like New">Used - Like New</option>
-                  <option value="Used - Good">Used - Good</option>
-                  <option value="Used - Acceptable">Used - Acceptable</option>
-                </select>
+        {/* Search results */}
+        {searchStage === 'results' && (
+          <div>
+            <div className="flex items-center mb-4">
+              <button
+                onClick={handleResetSearch}
+                className="text-blue-600 hover:text-blue-700 mr-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <h3 className="text-lg font-medium">Results for: {searchQuery}</h3>
+            </div>
+            
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2">Search Preferences</h4>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(selectedOptions).map(([key, value]) => (
+                  <div key={key} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                    {value}
+                  </div>
+                ))}
               </div>
             </div>
             
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={resetSearch}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900"
-              >
-                Reset
-              </button>
-              <button
-                onClick={() => {
-                  handleSearch();
-                  setShowFilters(false);
-                }}
-                className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Apply Filters
-              </button>
-            </div>
+            {isSearching ? (
+              <div className="animate-pulse space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex">
+                      <div className="w-16 h-16 bg-gray-200 rounded"></div>
+                      <div className="ml-4 flex-1">
+                        <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {searchResults.map(result => (
+                  <motion.div
+                    key={result.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="flex">
+                      <img
+                        src={result.image}
+                        alt={result.title}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                      <div className="ml-4 flex-1">
+                        <h4 className="font-medium text-lg">{result.title}</h4>
+                        <p className="text-gray-600 text-sm mb-2">{result.description}</p>
+                        <div className="flex justify-between items-center">
+                          <div className="font-bold text-lg text-blue-600">
+                            {formatCurrency(result.price)}
+                          </div>
+                          <div className="flex items-center">
+                            <div className="flex items-center mr-2">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < Math.floor(result.rating)
+                                      ? 'text-yellow-400'
+                                      : i < result.rating
+                                      ? 'text-yellow-300'
+                                      : 'text-gray-300'
+                                  }`}
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                            </div>
+                            <span className="text-sm text-gray-600">
+                              ({result.reviews} reviews)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
-      
-      {/* Conversation interface */}
-      {isConversationMode && conversation.length > 0 && (
-        <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="space-y-4">
-            {conversation.map((message, index) => (
-              <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    message.type === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {message.text}
-                </div>
-              </div>
-            ))}
-            
-            {isAiThinking && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg px-4 py-2 text-gray-800">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
-                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce delay-100"></div>
-                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce delay-200"></div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* AI suggestions */}
-          {aiSuggestions.length > 0 && (
-            <div className="mt-4">
-              <div className="flex flex-wrap gap-2">
-                {aiSuggestions.map((option, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleOptionSelect(option)}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-sm font-medium"
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

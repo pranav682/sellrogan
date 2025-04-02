@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import TestResults from '@/components/TestResults';
 import { UserDataContext } from '@/lib/userDataService';
@@ -258,8 +260,8 @@ export default function TestPage() {
                   {result.details && (
                     <ul className="mt-2 text-sm space-y-1 list-disc list-inside pl-2">
                       {result.details
-                        .filter(d => d.toLowerCase().includes('error'))
-                        .map((detail, i) => (
+                        .filter((d: string) => d.toLowerCase().includes('error'))
+                        .map((detail: string, i: number) => (
                           <li key={i} className="text-red-700">{detail}</li>
                         ))}
                     </ul>
@@ -271,22 +273,22 @@ export default function TestPage() {
                       <div className="mt-2 text-sm text-gray-700">
                         <p>1. Add the following environment variables to your Vercel project:</p>
                         <pre className="bg-gray-100 p-2 rounded mt-2 overflow-x-auto">
-                          GOOGLE_AI_API_KEY=your_api_key_here
-                          ANALYTICS_API_ENDPOINT=https://api.sellrogan.com/analytics
+                          {`GOOGLE_AI_API_KEY=your_api_key_here
+ANALYTICS_API_ENDPOINT=https://api.sellrogan.com/analytics`}
                         </pre>
                         
                         <p className="mt-2">2. Update the documentation API route path resolution:</p>
                         <pre className="bg-gray-100 p-2 rounded mt-2 overflow-x-auto">
-                          // In src/app/api/v1/docs/route.ts
-                          import { join } from 'path';
-                          
-                          // Replace:
-                          // const docsPath = join(process.cwd(), 'docs');
-                          
-                          // With:
-                          const docsPath = process.env.NODE_ENV === 'production'
-                            ? join('/tmp', 'docs')
-                            : join(process.cwd(), 'docs');
+                          {`// In src/app/api/v1/docs/route.ts
+import { join } from 'path';
+
+// Replace:
+// const docsPath = join(process.cwd(), 'docs');
+
+// With:
+const docsPath = process.env.NODE_ENV === 'production'
+  ? join('/tmp', 'docs')
+  : join(process.cwd(), 'docs');`}
                         </pre>
                       </div>
                     )}
@@ -312,8 +314,8 @@ export default function TestPage() {
                   {result.details && (
                     <ul className="mt-2 text-sm space-y-1 list-disc list-inside pl-2">
                       {result.details
-                        .filter(d => d.toLowerCase().includes('warning'))
-                        .map((detail, i) => (
+                        .filter((d: string) => d.toLowerCase().includes('warning'))
+                        .map((detail: string, i: number) => (
                           <li key={i} className="text-yellow-700">{detail}</li>
                         ))}
                     </ul>

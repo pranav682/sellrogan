@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AlertCircle, Star, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { UserDataContext } from '@/lib/userDataService';
 import { 
@@ -199,10 +200,10 @@ const AutomatedFulfillment: React.FC<AutomatedFulfillmentProps> = ({ className =
     setOrders(updatedOrders);
     
     // Track event
-    trackEvent('order_fulfilled', { orderId });
-    
-    // Close order details if open
-    setSelectedOrder(null);
+    trackEvent('order_fulfilled', { 
+      orderId, 
+      marketplace: updatedOrders[orderIndex].marketplace 
+    });
   };
   
   // Handle completing an order
@@ -222,10 +223,10 @@ const AutomatedFulfillment: React.FC<AutomatedFulfillmentProps> = ({ className =
     setOrders(updatedOrders);
     
     // Track event
-    trackEvent('order_completed', { orderId });
-    
-    // Close order details if open
-    setSelectedOrder(null);
+    trackEvent('order_completed', { 
+      orderId, 
+      marketplace: updatedOrders[orderIndex].marketplace 
+    });
   };
   
   // Handle cancelling an order
@@ -245,294 +246,261 @@ const AutomatedFulfillment: React.FC<AutomatedFulfillmentProps> = ({ className =
     setOrders(updatedOrders);
     
     // Track event
-    trackEvent('order_cancelled', { orderId });
-    
-    // Close order details if open
+    trackEvent('order_cancelled', { 
+      orderId, 
+      marketplace: updatedOrders[orderIndex].marketplace 
+    });
+  };
+  
+  // Handle viewing order details
+  const handleViewOrderDetails = (order: any) => {
+    setSelectedOrder(order);
+  };
+  
+  // Handle closing order details modal
+  const handleCloseOrderDetails = () => {
     setSelectedOrder(null);
   };
   
-  // Handle updating fulfillment settings
-  const handleUpdateSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Track event
-    trackEvent('fulfillment_settings_updated', { settings: fulfillmentSettings });
-    
-    // Close settings modal
-    setShowSettingsModal(false);
-  };
-  
   // Format currency
-  const formatCurrency = (value: string | number) => {
+  const formatCurrency = (value: number | string) => {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(typeof value === 'string' ? parseFloat(value) : value);
+    }).format(numValue);
   };
   
   // Format date
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-  
-  // Get filtered orders based on active tab
-  const getFilteredOrders = () => {
-    return orders.filter(order => {
-      if (activeTab === 'all') return true;
-      return order.status === activeTab;
+      day: 'numeric'
     });
   };
   
-  // Get status badge
-  const getStatusBadge = (status: string) => {
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            Pending
-          </span>
-        );
+        return 'bg-yellow-100 text-yellow-800';
       case 'processing':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Processing
-          </span>
-        );
+        return 'bg-blue-100 text-blue-800';
       case 'completed':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            Completed
-          </span>
-        );
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            Cancelled
-          </span>
-        );
+        return 'bg-red-100 text-red-800';
       default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            {status}
-          </span>
-        );
+        return 'bg-gray-100 text-gray-800';
     }
   };
   
-  // Get marketplace badge
-  const getMarketplaceBadge = (marketplace: string) => {
-    switch (marketplace.toLowerCase()) {
-      case 'amazon':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-            Amazon
-          </span>
-        );
-      case 'ebay':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            eBay
-          </span>
-        );
-      case 'walmart':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Walmart
-          </span>
-        );
-      case 'etsy':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-            Etsy
-          </span>
-        );
+  // Get marketplace icon
+  const getMarketplaceIcon = (marketplace: string) => {
+    switch (marketplace) {
+      case 'Amazon':
+        return <ShoppingBag className="h-4 w-4 text-orange-500" />;
+      case 'eBay':
+        return <ShoppingBag className="h-4 w-4 text-blue-500" />;
+      case 'Walmart':
+        return <ShoppingBag className="h-4 w-4 text-blue-700" />;
+      case 'Etsy':
+        return <ShoppingBag className="h-4 w-4 text-orange-600" />;
       default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            {marketplace}
-          </span>
-        );
+        return <ShoppingBag className="h-4 w-4 text-gray-500" />;
     }
   };
+  
+  // Get carrier icon
+  const getCarrierIcon = (carrier: string) => {
+    switch (carrier) {
+      case 'USPS':
+        return <Truck className="h-4 w-4 text-blue-500" />;
+      case 'FedEx':
+        return <Truck className="h-4 w-4 text-purple-500" />;
+      case 'UPS':
+        return <Truck className="h-4 w-4 text-brown-500" />;
+      default:
+        return <Truck className="h-4 w-4 text-gray-500" />;
+    }
+  };
+  
+  // Filter orders by status
+  const filteredOrders = orders.filter(order => {
+    if (activeTab === 'all') return true;
+    return order.status === activeTab;
+  });
+  
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className={`automated-fulfillment ${className}`}>
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold">Order Fulfillment</h2>
+            <div className="animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+          </div>
+          
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 bg-gray-200 rounded"></div>
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between">
+                    <div className="space-y-2">
+                      <div className="h-5 bg-gray-200 rounded w-32"></div>
+                      <div className="h-4 bg-gray-200 rounded w-48"></div>
+                    </div>
+                    <div className="h-8 bg-gray-200 rounded w-24"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className={`automated-fulfillment ${className}`}>
       <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold flex items-center">
             <Package className="h-5 w-5 mr-2 text-blue-600" />
-            Automated Order Fulfillment
+            Order Fulfillment
           </h2>
-          
           <button
             onClick={() => setShowSettingsModal(true)}
-            className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-100 flex items-center"
+            className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md flex items-center"
           >
             <Zap className="h-4 w-4 mr-1" />
-            Fulfillment Settings
+            Settings
           </button>
         </div>
         
-        {/* Auto-fulfillment status */}
-        <div className={`mb-6 p-4 rounded-lg flex items-center ${
-          fulfillmentSettings.autoFulfillment 
-            ? 'bg-green-50 text-green-700' 
-            : 'bg-yellow-50 text-yellow-700'
-        }`}>
-          {fulfillmentSettings.autoFulfillment ? (
-            <>
-              <Check className="h-5 w-5 mr-2" />
-              <div>
-                <p className="font-medium">Automated fulfillment is enabled</p>
-                <p className="text-sm">New orders will be automatically fulfilled from the optimal source.</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <AlertCircle className="h-5 w-5 mr-2" />
-              <div>
-                <p className="font-medium">Automated fulfillment is disabled</p>
-                <p className="text-sm">You'll need to manually fulfill new orders.</p>
-              </div>
-            </>
-          )}
-        </div>
-        
-        {/* Order tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-6">
-            {['pending', 'processing', 'completed', 'all'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                {tab !== 'all' && (
-                  <span className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
-                    activeTab === tab
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {orders.filter(order => order.status === tab).length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
+        {/* Status tabs */}
+        <div className="flex border-b border-gray-200 mb-4">
+          {['pending', 'processing', 'completed', 'all'].map((tab) => (
+            <button
+              key={tab}
+              className={`px-4 py-2 text-sm font-medium ${
+                activeTab === tab
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab !== 'all' && (
+                <span className="ml-1 text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">
+                  {orders.filter(order => order.status === tab).length}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
         
         {/* Orders list */}
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="ml-3 text-gray-600">Loading orders...</p>
-          </div>
-        ) : getFilteredOrders().length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-gray-900 mb-1">No {activeTab !== 'all' ? activeTab : ''} orders found</h3>
+        {filteredOrders.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <AlertCircle className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No orders found</h3>
             <p className="text-gray-500">
-              {activeTab === 'pending' 
-                ? 'When you receive new orders, they will appear here.'
-                : activeTab === 'processing'
-                ? 'Orders being fulfilled will appear here.'
-                : activeTab === 'completed'
-                ? 'Completed orders will appear here.'
-                : 'You don\'t have any orders yet.'}
+              {activeTab === 'all'
+                ? "You don't have any orders yet."
+                : `You don't have any ${activeTab} orders.`}
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Marketplace
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Profit
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {getFilteredOrders().map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-blue-600 cursor-pointer" onClick={() => setSelectedOrder(order)}>
-                        {order.id}
+          <div className="space-y-3">
+            {filteredOrders.map((order) => (
+              <motion.div
+                key={order.id}
+                className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center mb-2">
+                      <span className="font-medium">{order.id}</span>
+                      <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${getStatusBadgeColor(order.status)}`}>
+                        {order.status.toUpperCase()}
+                      </span>
+                      <div className="ml-2 flex items-center text-xs text-gray-500">
+                        {getMarketplaceIcon(order.marketplace)}
+                        <span className="ml-1">{order.marketplace}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{order.customer.name}</div>
-                      <div className="text-xs text-gray-500">{order.customer.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(order.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getMarketplaceBadge(order.marketplace)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{formatCurrency(order.total)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-green-600 font-medium">{formatCurrency(order.profit)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{formatDate(order.date)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => setSelectedOrder(order)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        View
-                      </button>
-                      {order.status === 'pending' && (
-                        <button
-                          onClick={() => handleFulfillOrder(order.id)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          Fulfill
-                        </button>
+                    </div>
+                    
+                    <div className="text-sm text-gray-500 mb-2">
+                      <div>
+                        <span className="font-medium">Date:</span> {formatDate(order.date)}
+                      </div>
+                      <div>
+                        <span className="font-medium">Customer:</span> {order.customer.name}
+                      </div>
+                      <div>
+                        <span className="font-medium">Items:</span> {order.items.reduce((total: number, item: any) => total + item.quantity, 0)} items, {formatCurrency(order.total)}
+                      </div>
+                      {order.status === 'processing' && order.source.trackingNumber && (
+                        <div className="flex items-center">
+                          <span className="font-medium">Tracking:</span>
+                          <span className="ml-1">{order.source.trackingNumber}</span>
+                          <span className="ml-2 flex items-center">
+                            {getCarrierIcon(order.source.carrier)}
+                            <span className="ml-1">{order.source.carrier}</span>
+                          </span>
+                        </div>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    {order.status === 'pending' && (
+                      <button
+                        onClick={() => handleFulfillOrder(order.id)}
+                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      >
+                        Fulfill Order
+                      </button>
+                    )}
+                    
+                    {order.status === 'processing' && (
+                      <button
+                        onClick={() => handleCompleteOrder(order.id)}
+                        className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                      >
+                        Mark Delivered
+                      </button>
+                    )}
+                    
+                    {(order.status === 'pending' || order.status === 'processing') && (
+                      <button
+                        onClick={() => handleCancelOrder(order.id)}
+                        className="px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => handleViewOrderDetails(order)}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
         )}
       </div>
@@ -540,173 +508,143 @@ const AutomatedFulfillment: React.FC<AutomatedFulfillmentProps> = ({ className =
       {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div 
+          <motion.div
             className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
           >
-            <div className="h-2 rounded-t-lg bg-blue-600"></div>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold">Fulfillment Settings</h3>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             
-            <div className="p-6">
-              <h3 className="text-xl font-semibold mb-4 flex items-center">
-                <Zap className="h-5 w-5 mr-2 text-blue-600" />
-                Fulfillment Settings
-              </h3>
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">Automated Fulfillment</div>
+                  <div className="text-sm text-gray-500">Automatically fulfill orders when received</div>
+                </div>
+                <div>
+                  <button
+                    onClick={() => setFulfillmentSettings({
+                      ...fulfillmentSettings,
+                      autoFulfillment: !fulfillmentSettings.autoFulfillment
+                    })}
+                    className={`w-12 h-6 rounded-full flex items-center transition-colors duration-300 focus:outline-none ${
+                      fulfillmentSettings.autoFulfillment ? 'bg-blue-600 justify-end' : 'bg-gray-300 justify-start'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white shadow-md transform mx-1"></div>
+                  </button>
+                </div>
+              </div>
               
-              <form onSubmit={handleUpdateSettings}>
-                <div className="space-y-4">
-                  {/* Auto-fulfillment toggle */}
-                  <div className="flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id="autoFulfillment"
-                        name="autoFulfillment"
-                        type="checkbox"
-                        checked={fulfillmentSettings.autoFulfillment}
-                        onChange={(e) => setFulfillmentSettings({
-                          ...fulfillmentSettings,
-                          autoFulfillment: e.target.checked
-                        })}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label htmlFor="autoFulfillment" className="font-medium text-gray-700">
-                        Enable automated fulfillment
-                      </label>
-                      <p className="text-gray-500">
-                        Automatically place orders with suppliers when you receive a new order.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Preferred shipping method */}
-                  <div>
-                    <label htmlFor="preferredShippingMethod" className="block text-sm font-medium text-gray-700 mb-1">
-                      Preferred shipping method
-                    </label>
-                    <select
-                      id="preferredShippingMethod"
-                      name="preferredShippingMethod"
-                      value={fulfillmentSettings.preferredShippingMethod}
-                      onChange={(e) => setFulfillmentSettings({
-                        ...fulfillmentSettings,
-                        preferredShippingMethod: e.target.value
-                      })}
-                      className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                    >
-                      <option value="economy">Economy (5-7 days)</option>
-                      <option value="standard">Standard (3-5 days)</option>
-                      <option value="expedited">Expedited (2-3 days)</option>
-                      <option value="priority">Priority (1-2 days)</option>
-                    </select>
-                  </div>
-                  
-                  {/* Minimum profit margin */}
-                  <div>
-                    <label htmlFor="minimumProfitMargin" className="block text-sm font-medium text-gray-700 mb-1">
-                      Minimum profit margin (%)
-                    </label>
-                    <input
-                      type="number"
-                      id="minimumProfitMargin"
-                      name="minimumProfitMargin"
-                      min="0"
-                      max="100"
-                      value={fulfillmentSettings.minimumProfitMargin}
-                      onChange={(e) => setFulfillmentSettings({
-                        ...fulfillmentSettings,
-                        minimumProfitMargin: parseInt(e.target.value)
-                      })}
-                      className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Orders with profit margins below this threshold will require manual approval.
-                    </p>
-                  </div>
-                  
-                  {/* Notification settings */}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Notifications</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <input
-                          id="notifyOnFulfillment"
-                          name="notifyOnFulfillment"
-                          type="checkbox"
-                          checked={fulfillmentSettings.notifyOnFulfillment}
-                          onChange={(e) => setFulfillmentSettings({
-                            ...fulfillmentSettings,
-                            notifyOnFulfillment: e.target.checked
-                          })}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <label htmlFor="notifyOnFulfillment" className="ml-2 text-sm text-gray-700">
-                          Notify me when an order is fulfilled
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          id="notifyOnDelivery"
-                          name="notifyOnDelivery"
-                          type="checkbox"
-                          checked={fulfillmentSettings.notifyOnDelivery}
-                          onChange={(e) => setFulfillmentSettings({
-                            ...fulfillmentSettings,
-                            notifyOnDelivery: e.target.checked
-                          })}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <label htmlFor="notifyOnDelivery" className="ml-2 text-sm text-gray-700">
-                          Notify me when an order is delivered
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Advanced settings */}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Advanced Settings</h4>
-                    <div className="flex items-center">
-                      <input
-                        id="autoRateOptimization"
-                        name="autoRateOptimization"
-                        type="checkbox"
-                        checked={fulfillmentSettings.autoRateOptimization}
-                        onChange={(e) => setFulfillmentSettings({
-                          ...fulfillmentSettings,
-                          autoRateOptimization: e.target.checked
-                        })}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <label htmlFor="autoRateOptimization" className="ml-2 text-sm text-gray-700">
-                        Automatically optimize shipping rates
-                      </label>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Compare shipping rates across carriers to find the best option.
-                    </p>
-                  </div>
+              <div>
+                <div className="font-medium mb-2">Preferred Shipping Method</div>
+                <select
+                  value={fulfillmentSettings.preferredShippingMethod}
+                  onChange={(e) => setFulfillmentSettings({
+                    ...fulfillmentSettings,
+                    preferredShippingMethod: e.target.value
+                  })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="economy">Economy (5-7 days)</option>
+                  <option value="standard">Standard (3-5 days)</option>
+                  <option value="expedited">Expedited (2-3 days)</option>
+                  <option value="overnight">Overnight (1 day)</option>
+                </select>
+              </div>
+              
+              <div>
+                <div className="font-medium mb-2">Minimum Profit Margin (%)</div>
+                <input
+                  type="number"
+                  value={fulfillmentSettings.minimumProfitMargin}
+                  onChange={(e) => setFulfillmentSettings({
+                    ...fulfillmentSettings,
+                    minimumProfitMargin: parseInt(e.target.value)
+                  })}
+                  min="0"
+                  max="100"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">Notify on Fulfillment</div>
+                  <div className="text-sm text-gray-500">Receive notifications when orders are fulfilled</div>
                 </div>
-                
-                <div className="mt-6 flex justify-end space-x-3">
+                <div>
                   <button
-                    type="button"
-                    onClick={() => setShowSettingsModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    onClick={() => setFulfillmentSettings({
+                      ...fulfillmentSettings,
+                      notifyOnFulfillment: !fulfillmentSettings.notifyOnFulfillment
+                    })}
+                    className={`w-12 h-6 rounded-full flex items-center transition-colors duration-300 focus:outline-none ${
+                      fulfillmentSettings.notifyOnFulfillment ? 'bg-blue-600 justify-end' : 'bg-gray-300 justify-start'
+                    }`}
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    Save Settings
+                    <div className="w-4 h-4 rounded-full bg-white shadow-md transform mx-1"></div>
                   </button>
                 </div>
-              </form>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">Notify on Delivery</div>
+                  <div className="text-sm text-gray-500">Receive notifications when orders are delivered</div>
+                </div>
+                <div>
+                  <button
+                    onClick={() => setFulfillmentSettings({
+                      ...fulfillmentSettings,
+                      notifyOnDelivery: !fulfillmentSettings.notifyOnDelivery
+                    })}
+                    className={`w-12 h-6 rounded-full flex items-center transition-colors duration-300 focus:outline-none ${
+                      fulfillmentSettings.notifyOnDelivery ? 'bg-blue-600 justify-end' : 'bg-gray-300 justify-start'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white shadow-md transform mx-1"></div>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">Auto Rate Optimization</div>
+                  <div className="text-sm text-gray-500">Automatically select the best shipping rate</div>
+                </div>
+                <div>
+                  <button
+                    onClick={() => setFulfillmentSettings({
+                      ...fulfillmentSettings,
+                      autoRateOptimization: !fulfillmentSettings.autoRateOptimization
+                    })}
+                    className={`w-12 h-6 rounded-full flex items-center transition-colors duration-300 focus:outline-none ${
+                      fulfillmentSettings.autoRateOptimization ? 'bg-blue-600 justify-end' : 'bg-gray-300 justify-start'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white shadow-md transform mx-1"></div>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Save Settings
+              </button>
             </div>
           </motion.div>
         </div>
@@ -715,221 +653,257 @@ const AutomatedFulfillment: React.FC<AutomatedFulfillmentProps> = ({ className =
       {/* Order Details Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div 
+          <motion.div
             className="bg-white rounded-lg shadow-lg max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
           >
-            <div className={`h-2 rounded-t-lg ${
-              selectedOrder.status === 'pending' ? 'bg-yellow-500' :
-              selectedOrder.status === 'processing' ? 'bg-blue-600' :
-              selectedOrder.status === 'completed' ? 'bg-green-500' :
-              'bg-red-500'
-            }`}></div>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white">
+              <h3 className="text-lg font-semibold">Order Details: {selectedOrder.id}</h3>
+              <button
+                onClick={handleCloseOrderDetails}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-xl font-semibold flex items-center">
-                    <Package className="h-5 w-5 mr-2 text-blue-600" />
-                    Order {selectedOrder.id}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Placed on {formatDate(selectedOrder.date)}
-                  </p>
-                </div>
-                
-                <div className="flex items-center">
-                  {getStatusBadge(selectedOrder.status)}
-                  <button
-                    onClick={() => setSelectedOrder(null)}
-                    className="ml-4 text-gray-400 hover:text-gray-500"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Customer Information */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-3">Customer Information</h4>
-                  <div className="space-y-2 text-sm">
-                    <p><span className="text-gray-500">Name:</span> {selectedOrder.customer.name}</p>
-                    <p><span className="text-gray-500">Email:</span> {selectedOrder.customer.email}</p>
-                    <p><span className="text-gray-500">Phone:</span> {selectedOrder.customer.phone}</p>
-                    <p><span className="text-gray-500">Address:</span> {selectedOrder.customer.address}</p>
-                  </div>
-                </div>
-                
-                {/* Order Summary */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-3">Order Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <p><span className="text-gray-500">Marketplace:</span> {selectedOrder.marketplace}</p>
-                    <p><span className="text-gray-500">Total:</span> {formatCurrency(selectedOrder.total)}</p>
-                    <p><span className="text-gray-500">Shipping:</span> {formatCurrency(selectedOrder.shipping)}</p>
-                    <p><span className="text-gray-500">Tax:</span> {formatCurrency(selectedOrder.tax)}</p>
-                    <p className="font-medium text-green-600">
-                      <span className="text-gray-500 font-normal">Profit:</span> {formatCurrency(selectedOrder.profit)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Order Items */}
-              <div className="mb-6">
-                <h4 className="font-medium mb-3">Order Items</h4>
-                <div className="bg-gray-50 rounded-lg overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Item
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Price
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Quantity
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {selectedOrder.items.map((item: any) => (
-                        <tr key={item.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <img 
-                                src={item.image} 
-                                alt={item.name} 
-                                className="h-10 w-10 rounded-md mr-3"
-                              />
-                              <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatCurrency(item.price)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {item.quantity}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                            {formatCurrency(parseFloat(item.price) * item.quantity)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              
-              {/* Fulfillment Information */}
-              <div className="mb-6">
-                <h4 className="font-medium mb-3">Fulfillment Information</h4>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="space-y-2 text-sm">
-                    <p><span className="text-gray-500">Supplier:</span> {selectedOrder.source.name}</p>
-                    <p><span className="text-gray-500">Cost:</span> {formatCurrency(selectedOrder.source.price)}</p>
-                    <p><span className="text-gray-500">Shipping:</span> {formatCurrency(selectedOrder.source.shipping)}</p>
-                    
-                    {selectedOrder.status === 'pending' && (
-                      <p><span className="text-gray-500">Estimated Delivery:</span> {formatDate(selectedOrder.source.estimatedDelivery)}</p>
-                    )}
-                    
-                    {(selectedOrder.status === 'processing' || selectedOrder.status === 'completed') && (
-                      <>
-                        <p><span className="text-gray-500">Order Number:</span> {selectedOrder.source.orderNumber}</p>
-                        <p><span className="text-gray-500">Tracking Number:</span> {selectedOrder.source.trackingNumber}</p>
-                        <p><span className="text-gray-500">Carrier:</span> {selectedOrder.source.carrier}</p>
-                        {selectedOrder.status === 'processing' && (
-                          <p><span className="text-gray-500">Estimated Delivery:</span> {formatDate(selectedOrder.source.estimatedDelivery)}</p>
-                        )}
-                      </>
-                    )}
-                    
-                    {selectedOrder.status === 'completed' && selectedOrder.deliveredDate && (
-                      <p><span className="text-gray-500">Delivered On:</span> {formatDate(selectedOrder.deliveredDate)}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Customer Feedback */}
-              {selectedOrder.status === 'completed' && selectedOrder.feedback && (
-                <div className="mb-6">
-                  <h4 className="font-medium mb-3">Customer Feedback</h4>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            className={`h-5 w-5 ${
-                              i < selectedOrder.feedback.rating 
-                                ? 'text-yellow-400 fill-yellow-400' 
-                                : 'text-gray-300'
-                            }`} 
-                          />
-                        ))}
+                  <h4 className="font-medium text-gray-900 mb-2">Order Information</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-gray-500">Status</div>
+                        <div className="font-medium">
+                          <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadgeColor(selectedOrder.status)}`}>
+                            {selectedOrder.status.toUpperCase()}
+                          </span>
+                        </div>
                       </div>
-                      <span className="ml-2 text-sm text-gray-600">
-                        {selectedOrder.feedback.rating}/5
-                      </span>
+                      <div>
+                        <div className="text-sm text-gray-500">Date</div>
+                        <div className="font-medium">{formatDate(selectedOrder.date)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Marketplace</div>
+                        <div className="font-medium flex items-center">
+                          {getMarketplaceIcon(selectedOrder.marketplace)}
+                          <span className="ml-1">{selectedOrder.marketplace}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Total</div>
+                        <div className="font-medium">{formatCurrency(selectedOrder.total)}</div>
+                      </div>
+                      {selectedOrder.status === 'processing' && selectedOrder.source.trackingNumber && (
+                        <>
+                          <div>
+                            <div className="text-sm text-gray-500">Tracking Number</div>
+                            <div className="font-medium">{selectedOrder.source.trackingNumber}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-500">Carrier</div>
+                            <div className="font-medium flex items-center">
+                              {getCarrierIcon(selectedOrder.source.carrier)}
+                              <span className="ml-1">{selectedOrder.source.carrier}</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {selectedOrder.status === 'completed' && selectedOrder.deliveredDate && (
+                        <div>
+                          <div className="text-sm text-gray-500">Delivered Date</div>
+                          <div className="font-medium">{formatDate(selectedOrder.deliveredDate)}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <h4 className="font-medium text-gray-900 mt-4 mb-2">Customer Information</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-sm text-gray-500">Name</div>
+                        <div className="font-medium">{selectedOrder.customer.name}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Email</div>
+                        <div className="font-medium">{selectedOrder.customer.email}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Phone</div>
+                        <div className="font-medium">{selectedOrder.customer.phone}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Shipping Address</div>
+                        <div className="font-medium">{selectedOrder.customer.address}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {selectedOrder.feedback && (
+                    <>
+                      <h4 className="font-medium text-gray-900 mt-4 mb-2">Customer Feedback</h4>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center mb-2">
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < selectedOrder.feedback.rating
+                                    ? 'text-yellow-400 fill-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="ml-2 text-sm text-gray-600">
+                            {selectedOrder.feedback.rating}/5
+                          </span>
+                        </div>
+                        {selectedOrder.feedback.comment && (
+                          <div className="text-sm text-gray-700 italic">
+                            "{selectedOrder.feedback.comment}"
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Order Items</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="space-y-4">
+                      {selectedOrder.items.map((item: any) => (
+                        <div key={item.id} className="flex items-center">
+                          <img 
+                            src={item.image} 
+                            alt={item.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                          <div className="ml-3 flex-1">
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {item.quantity} × {formatCurrency(item.price)}
+                            </div>
+                          </div>
+                          <div className="font-medium">
+                            {formatCurrency(parseFloat(item.price) * item.quantity)}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     
-                    {selectedOrder.feedback.comment && (
-                      <p className="text-sm text-gray-600 italic">
-                        "{selectedOrder.feedback.comment}"
-                      </p>
-                    )}
+                    <div className="border-t border-gray-200 mt-4 pt-4">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal</span>
+                        <span>{formatCurrency(
+                          selectedOrder.items.reduce(
+                            (total: number, item: any) => total + (parseFloat(item.price) * item.quantity), 
+                            0
+                          )
+                        )}</span>
+                      </div>
+                      <div className="flex justify-between text-sm mt-2">
+                        <span>Shipping</span>
+                        <span>{formatCurrency(selectedOrder.shipping)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm mt-2">
+                        <span>Tax</span>
+                        <span>{formatCurrency(selectedOrder.tax)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium mt-2 pt-2 border-t border-gray-200">
+                        <span>Total</span>
+                        <span>{formatCurrency(selectedOrder.total)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <h4 className="font-medium text-gray-900 mt-4 mb-2">Source Information</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-sm text-gray-500">Supplier</div>
+                        <div className="font-medium">{selectedOrder.source.name}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Cost</div>
+                        <div className="font-medium">{formatCurrency(selectedOrder.source.price)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Shipping Cost</div>
+                        <div className="font-medium">{formatCurrency(selectedOrder.source.shipping)}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">Profit</div>
+                        <div className="font-medium text-green-600">{formatCurrency(selectedOrder.profit)}</div>
+                      </div>
+                      {selectedOrder.source.estimatedDelivery && (
+                        <div>
+                          <div className="text-sm text-gray-500">Estimated Delivery</div>
+                          <div className="font-medium">{formatDate(selectedOrder.source.estimatedDelivery)}</div>
+                        </div>
+                      )}
+                      {selectedOrder.source.orderNumber && (
+                        <div>
+                          <div className="text-sm text-gray-500">Supplier Order Number</div>
+                          <div className="font-medium">{selectedOrder.source.orderNumber}</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 flex justify-end">
+              {selectedOrder.status === 'pending' && (
+                <button
+                  onClick={() => {
+                    handleFulfillOrder(selectedOrder.id);
+                    handleCloseOrderDetails();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 mr-2"
+                >
+                  Fulfill Order
+                </button>
               )}
               
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 mt-6">
+              {selectedOrder.status === 'processing' && (
                 <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  onClick={() => {
+                    handleCompleteOrder(selectedOrder.id);
+                    handleCloseOrderDetails();
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 mr-2"
                 >
-                  Close
+                  Mark Delivered
                 </button>
-                
-                {selectedOrder.status === 'pending' && (
-                  <button
-                    onClick={() => handleFulfillOrder(selectedOrder.id)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-                  >
-                    <Truck className="h-4 w-4 mr-1" />
-                    Fulfill Order
-                  </button>
-                )}
-                
-                {selectedOrder.status === 'processing' && (
-                  <button
-                    onClick={() => handleCompleteOrder(selectedOrder.id)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Mark as Delivered
-                  </button>
-                )}
-                
-                {(selectedOrder.status === 'pending' || selectedOrder.status === 'processing') && (
-                  <button
-                    onClick={() => handleCancelOrder(selectedOrder.id)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  >
-                    Cancel Order
-                  </button>
-                )}
-              </div>
+              )}
+              
+              {(selectedOrder.status === 'pending' || selectedOrder.status === 'processing') && (
+                <button
+                  onClick={() => {
+                    handleCancelOrder(selectedOrder.id);
+                    handleCloseOrderDetails();
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 mr-2"
+                >
+                  Cancel Order
+                </button>
+              )}
+              
+              <button
+                onClick={handleCloseOrderDetails}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+              >
+                Close
+              </button>
             </div>
           </motion.div>
         </div>

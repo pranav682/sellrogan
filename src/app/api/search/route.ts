@@ -20,20 +20,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // For development purposes, we'll use mock data instead of actual scraping
-    // to avoid potential issues with web scraping in the sandbox environment
-    const useMockData = true;
-    
+    // For development and production, we'll use mock data
+    // In a real implementation, you would integrate with actual scraping services
     let results: ProductSource[] = [];
     
-    if (useMockData) {
-      // Use mock data for development
-      results = generateMockResults(body.query);
-    } else {
-      // Use actual web scraping for production
-      const platforms = body.platforms || ['amazon', 'walmart', 'ebay'];
-      results = await searchAcrossPlatforms(body.query, platforms);
-    }
+    // Use mock data for development and production
+    results = generateMockResults(body.query);
     
     return NextResponse.json({ results });
   } catch (error) {

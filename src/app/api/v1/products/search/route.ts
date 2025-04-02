@@ -1,58 +1,45 @@
-export const dynamic = "force-static";
-
 import { NextRequest, NextResponse } from 'next/server';
 import { validateApiKey, apiResponse, handleApiError, parseQueryParams } from '@/lib/apiUtils';
 import { ProductSource } from '@/lib/scrapers';
 
+export const dynamic = "force-static";
+
 // Mock data for demonstration purposes
 const mockProducts: ProductSource[] = [
   {
-    id: '1',
-    title: 'Wireless Earbuds',
-    description: 'Bluetooth 5.0 Wireless Earbuds with Noise Cancellation',
+    id: 1,
+    name: 'Wireless Earbuds',
     price: 49.99,
-    currency: 'USD',
-    platform: 'Amazon',
+    source: 'Amazon',
     url: 'https://amazon.com/wireless-earbuds',
-    imageUrl: 'https://example.com/images/earbuds.jpg',
-    rating: 4.5,
-    ratingCount: 1250,
-    availability: 'In Stock',
-    shippingCost: 0,
-    shippingTime: '2 days',
-    seller: 'TechGadgets',
-    sellerRating: 4.7,
-    condition: 'New',
-    timestamp: new Date().toISOString(),
-    reliability: 0.95
+    image: 'https://example.com/images/earbuds.jpg',
+    reliability: 0.95,
+    shipping: 0,
+    total: 49.99
   },
   {
-    id: '2',
-    title: 'Smart Watch',
-    description: 'Fitness Tracker Smart Watch with Heart Rate Monitor',
+    id: 2,
+    name: 'Smart Watch',
     price: 89.99,
-    currency: 'USD',
-    platform: 'eBay',
+    source: 'eBay',
     url: 'https://ebay.com/smart-watch',
-    imageUrl: 'https://example.com/images/smartwatch.jpg',
-    rating: 4.2,
-    ratingCount: 850,
-    availability: 'In Stock',
-    shippingCost: 4.99,
-    shippingTime: '3-5 days',
-    seller: 'WearableTech',
-    sellerRating: 4.5,
-    condition: 'New',
-    timestamp: new Date().toISOString(),
-    reliability: 0.88
+    image: 'https://example.com/images/smartwatch.jpg',
+    reliability: 0.88,
+    shipping: 4.99,
+    total: 94.98
   }
 ];
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     // Validate API key
-    const authError = await validateApiKey(req);
-    if (authError) return authError;
+    const isValid = validateApiKey(req);
+    if (!isValid) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid API key' },
+        { status: 401 }
+      );
+    }
     
     // Parse query parameters
     const params = parseQueryParams(req);
@@ -70,14 +57,13 @@ export async function GET(req: NextRequest) {
     // Filter by query
     if (query) {
       results = results.filter(product => 
-        product.title.toLowerCase().includes(query.toLowerCase()) ||
-        product.description.toLowerCase().includes(query.toLowerCase())
+        product.name.toLowerCase().includes(query.toLowerCase())
       );
     }
     
     // Filter by platform
     if (platform !== 'all') {
-      results = results.filter(product => product.platform === platform);
+      results = results.filter(product => product.source === platform);
     }
     
     // Filter by price range
@@ -97,9 +83,6 @@ export async function GET(req: NextRequest) {
         case 'price':
           comparison = a.price - b.price;
           break;
-        case 'rating':
-          comparison = a.rating - b.rating;
-          break;
         case 'reliability':
           comparison = a.reliability - b.reliability;
           break;
@@ -110,7 +93,7 @@ export async function GET(req: NextRequest) {
       return sortOrder === 'asc' ? comparison : -comparison;
     });
     
-    return apiResponse({
+    return NextResponse.json({
       success: true,
       count: results.length,
       results

@@ -10,20 +10,51 @@ interface PersonalizedRecommendationsProps {
 
 const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = ({ className = '' }) => {
   // Use user data context
-  const { userData, getRecommendations, privacySettings, trackEvent } = React.useContext(UserDataContext);
+  const { userData, privacySettings, trackEvent } = React.useContext(UserDataContext);
   
   // State for recommendations
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Generate mock recommendations based on user data
+  const generateRecommendations = () => {
+    // In a real implementation, this would use AI to analyze user data
+    // For now, we'll generate mock recommendations
+    const mockRecommendations = [
+      {
+        id: 'rec-001',
+        title: 'Electronics Deals',
+        type: 'search_based',
+        confidence: 0.92,
+        products: ['Smartphone', 'Laptop', 'Headphones']
+      },
+      {
+        id: 'rec-002',
+        title: 'Home Essentials',
+        type: 'product_based',
+        confidence: 0.85,
+        products: ['Kitchen Appliances', 'Furniture', 'Decor']
+      },
+      {
+        id: 'rec-003',
+        title: 'Amazon Bestsellers',
+        type: 'marketplace_based',
+        confidence: 0.78,
+        products: ['Books', 'Toys', 'Fashion']
+      }
+    ];
+    
+    return mockRecommendations;
+  };
   
   // Get recommendations on mount and when userData changes
   useEffect(() => {
     if (privacySettings.allowPersonalization && privacySettings.allowCookies) {
       setIsLoading(true);
       // In a real implementation, this might be an API call
-      // For now, we'll use the context function with a timeout to simulate loading
+      // For now, we'll use a timeout to simulate loading
       setTimeout(() => {
-        const recs = getRecommendations();
+        const recs = generateRecommendations();
         setRecommendations(recs);
         setIsLoading(false);
       }, 1000);
@@ -31,7 +62,7 @@ const PersonalizedRecommendations: React.FC<PersonalizedRecommendationsProps> = 
       setRecommendations([]);
       setIsLoading(false);
     }
-  }, [userData, privacySettings, getRecommendations]);
+  }, [userData, privacySettings]);
   
   // Handle recommendation click
   const handleRecommendationClick = (recommendation: any) => {

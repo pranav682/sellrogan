@@ -23,7 +23,15 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({ className = '' }) => 
   
   // Update local state when context changes
   useEffect(() => {
-    setLocalSettings(privacySettings);
+    // Map the context privacy settings to our local settings structure
+    setLocalSettings(prev => ({
+      ...prev,
+      allowPersonalization: privacySettings.allowPersonalization,
+      allowCookies: privacySettings.allowCookies,
+      // Map allowAnalytics to our tracking settings
+      allowSearchTracking: privacySettings.allowAnalytics,
+      allowProductViewTracking: privacySettings.allowAnalytics
+    }));
   }, [privacySettings]);
   
   // Handle form changes
@@ -39,7 +47,13 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({ className = '' }) => 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updatePrivacySettings(localSettings);
+    
+    // Map our local settings back to the context structure
+    updatePrivacySettings({
+      allowPersonalization: localSettings.allowPersonalization,
+      allowCookies: localSettings.allowCookies,
+      allowAnalytics: localSettings.allowSearchTracking && localSettings.allowProductViewTracking
+    });
   };
   
   // Handle reset to defaults
@@ -53,7 +67,13 @@ const PrivacySettings: React.FC<PrivacySettingsProps> = ({ className = '' }) => 
     };
     
     setLocalSettings(defaults);
-    updatePrivacySettings(defaults);
+    
+    // Map to context structure
+    updatePrivacySettings({
+      allowPersonalization: defaults.allowPersonalization,
+      allowCookies: defaults.allowCookies,
+      allowAnalytics: defaults.allowSearchTracking && defaults.allowProductViewTracking
+    });
   };
   
   return (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bell, Mail, Smartphone, Toggle, Check } from 'lucide-react';
+import { Bell, Mail, Smartphone, Check } from 'lucide-react';
 
 interface NotificationSettingsProps {
   className?: string;
@@ -207,7 +207,6 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ className =
             
             <div className="space-y-3">
               {/* Similar structure as email notifications, with push settings */}
-              {/* For brevity, not repeating all the items */}
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <div>
                   <div className="font-medium">Order Updates</div>
@@ -269,7 +268,6 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ className =
             
             <div className="space-y-3">
               {/* Similar structure as email notifications, with sms settings */}
-              {/* For brevity, not repeating all the items */}
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <div>
                   <div className="font-medium">Order Updates</div>
@@ -305,12 +303,12 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({ className =
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="mt-8 flex justify-end">
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-            Save Changes
-          </button>
+          
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+              Save Preferences
+            </button>
+          </div>
         </div>
       </div>
     </div>
