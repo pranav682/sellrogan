@@ -1,0 +1,124 @@
+[
+  {
+    "success": true,
+    "documentation": {
+      "title": "SourceAndSell API Documentation",
+      "version": "1.0.0",
+      "description": "API documentation for the SourceAndSell platform",
+      "endpoints": [
+        {
+          "path": "/api/v1/products/search",
+          "method": "GET",
+          "description": "Search for products across multiple platforms",
+          "parameters": [
+            {
+              "name": "query",
+              "type": "string",
+              "required": true,
+              "description": "Search query"
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": false,
+              "description": "Filter by platform (amazon, ebay, walmart, etc.)"
+            },
+            {
+              "name": "minPrice",
+              "type": "number",
+              "required": false,
+              "description": "Minimum price filter"
+            },
+            {
+              "name": "maxPrice",
+              "type": "number",
+              "required": false,
+              "description": "Maximum price filter"
+            }
+          ],
+          "response": {
+            "success": "boolean",
+            "count": "number",
+            "results": "array of product objects"
+          },
+          "example": {
+            "request": "/api/v1/products/search?query=wireless+earbuds&platform=amazon&maxPrice=100",
+            "response": {
+              "success": true,
+              "count": 2,
+              "results": [
+                {
+                  "id": "1",
+                  "title": "Wireless Earbuds",
+                  "price": 49.99,
+                  "platform": "Amazon"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "path": "/api/v1/analytics",
+          "method": "GET",
+          "description": "Get analytics data for your listings",
+          "parameters": [
+            {
+              "name": "timeframe",
+              "type": "string",
+              "required": false,
+              "description": "Time range (7d, 30d, 90d, 1y, all)"
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": false,
+              "description": "Filter by platform"
+            }
+          ],
+          "response": {
+            "success": "boolean",
+            "data": "analytics data object"
+          }
+        },
+        {
+          "path": "/api/v1/listings",
+          "method": "POST",
+          "description": "Create a new listing",
+          "parameters": [
+            {
+              "name": "product",
+              "type": "object",
+              "required": true,
+              "description": "Product details"
+            },
+            {
+              "name": "platform",
+              "type": "string",
+              "required": true,
+              "description": "Target platform for listing"
+            },
+            {
+              "name": "price",
+              "type": "number",
+              "required": true,
+              "description": "Listing price"
+            }
+          ],
+          "response": {
+            "success": "boolean",
+            "listing": "created listing object"
+          }
+        }
+      ],
+      "authentication": {
+        "type": "API Key",
+        "location": "Header (X-API-Key)",
+        "plans": {
+          "Basic": "100 requests/day",
+          "Pro": "1,000 requests/day",
+          "Enterprise": "10,000 requests/day"
+        }
+      }
+    }
+  }
+]
